@@ -1,0 +1,43 @@
+---
+# fetch_k3os_kubeconfig/tasks/main.yml
+
+- name: 'Check if we already have a k3os-kubeconfig file'
+  stat:
+    path: 'k3os-kubeconfig'
+  delegate_to: 'localhost'
+  become: 'false'
+  register: does_k3os_kubeconfig_exist
+
+- name: 'Fetch kubeconfig to Ansible control node'
+  fetch:
+    src: '/etc/rancher/k3s/k3s.yaml'
+    dest: 'k3os-kubeconfig'
+    flat: 'yes'
+  when:
+    - 'not does_k3os_kubeconfig_exist.stat.exists | bool'
+
+- name: 'Check if we now have a k3os-kubeconfig file'
+  stat:
+    path: 'k3os-kubeconfig'
+  delegate_to: 'localhost'
+  become: 'false'
+  register: does_k3os_kubeconfig_exist_now
+
+- name: 'Fix permissions on k3os-kubeconfig'
+  file:
+    path: 'k3os-kubeconfig'
+    mode: '0600'
+  delegate_to: 'localhost'
+  become: 'false'
+  when:
+    - 'does_k3os_kubeconfig_exist_now.stat.exists | bool'
+
+- name: 'Change server IP in kubeconfig file to external_ip (or the default IPv4 address)'
+  lineinfile:
+    path: 'k3os-kubeconfig'
+    regexp: '(\s*)server: https://127.0.0.1:(.*)'
+    line: '\1server: https://{{ external_ip | default(hostvars[inventory_hostname]["ansible_default_ipv4"]["address"] )}}:\2'
+    backrefs: 'true'
+  delegate_to: 'localhost'
+  become: 'false'
+  ignore_errors: "{{ ansible_check_mode }}"
