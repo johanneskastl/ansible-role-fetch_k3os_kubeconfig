@@ -3,6 +3,10 @@ fetch_k3os_kubeconfig
 
 Fetch the kubeconfig file from a host running Rancher's k3os
 
+**Attention**
+ This role works, but uses a rather hacky solution, as there is no python installed and no way to install it.
+See [this Github issue](https://github.com/rancher/k3os/issues/296) for details and discussion.
+
 Requirements
 ------------
 
