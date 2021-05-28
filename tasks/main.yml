@@ -9,10 +9,12 @@
   register: does_k3os_kubeconfig_exist
 
 - name: 'Fetch kubeconfig to Ansible control node'
-  fetch:
-    src: '/etc/rancher/k3s/k3s.yaml'
-    dest: 'k3os-kubeconfig'
-    flat: 'yes'
+  command:
+    # hacky solution, as k3os does not have python installed
+    cmd: "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ ansible_ssh_private_key_file }} {{ ansible_user }}@{{ ansible_host }}:/etc/rancher/k3s/k3s.yaml k3os-kubeconfig"
+    creates: 'k3os-kubeconfig'
+  delegate_to: 'localhost'
+  become: 'false'
   when:
     - 'not does_k3os_kubeconfig_exist.stat.exists | bool'
 
@@ -36,7 +38,7 @@
   lineinfile:
     path: 'k3os-kubeconfig'
     regexp: '(\s*)server: https://127.0.0.1:(.*)'
-    line: '\1server: https://{{ external_ip | default(hostvars[inventory_hostname]["ansible_default_ipv4"]["address"] )}}:\2'
+    line: '\1server: https://{{ ansible_host }}:\2'
     backrefs: 'true'
   delegate_to: 'localhost'
   become: 'false'
